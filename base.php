@@ -13,8 +13,8 @@ define('HRLine', "\n=======================\n");
 	@TODO Destroy Setup if error ouccured. Delete folder and Version Stuff if done by builder.
 */
 class WmdbBase {
-	private $shortOptions = array('k:', 't::', 'h::', 'novcs::');
-	private $longOptions = array('extkey:' => 'k:', 'type::' => 't::', 'help::' => 'h::');
+	private $shortOptions = array('k:', 't::', 'h::', 'novcs::', 'b::');
+	private $longOptions = array('extkey:' => 'k:', 'type::' => 't::', 'help::' => 'h::', 'baseurl::' => 'b::');
 	private $options = array();
 	private $returnHelp = false;
 	private $conf = array();
@@ -37,7 +37,7 @@ class WmdbBase {
 				throw new Exception('The Extension ' . $this->options['k'] . ' does already exist!');
 			}
 			if($this->options['novcs'] !== '1') {
-				$this->testSvnRepo($this->options);			
+				$this->testVcs($this->options);
 			}
 			$this->doExportFromBaseRepos($this->options);
 			$this->doRenamingStuff();
@@ -61,6 +61,7 @@ class WmdbBase {
 		echo ' -k, -extkey :' . TAB . TAB . '[required] You have to pass the extension key with this option (-k wmdb_base_awesome)' . LF;
 		echo ' -h, -help :' . TAB . TAB . 'Will show informations' . LF;
 		echo ' -novcs:' . TAB . TAB . 'Disable the VCS import' . LF;
+		echo ' -b, -baseurl:' . TAB . TAB . 'Sets the base URL to the given url. Please do not add any protocol to your url! (Example: www.wmdb.de, NOT http://www.wmdb.de/)' . LF;
 		echo LF. 'The builder will automatically import the new Extension to the repository "' . $this->conf['importRepos'] . '".' . LF;
 		echo 'Up to now your have not the possibility to choose the import repo by yourself.' . LF;
 		echo "
@@ -111,16 +112,17 @@ class WmdbBase {
 			throw new Exception('Could not find config.ini in base.php folder!');
 		}
 		$tempConf = parse_ini_file($conf, true);
-		if(!isset($this->options['t']) && trim($this->options['t']) == '') {
-			$this->options['t'] = 'svn';
-		}
-		$this->conf = $tempConf[$this->options['t']];
-		if(!is_array($this->conf) || count($this->conf) <= 0) {
+		$defaults = $tempConf['default'];
+		if( !isset($tempConf[$defaults['exportType']]) || !isset($tempConf[$defaults['importType']])) {
 			throw new Exception(
-				'No configuration found for handle type: ' . $this->options['t'] . '.' . LF .
+				'No configuration found for handle type: ' . LF . var_dump($defaults) . '.' . LF .
 				'Please check your configuration in your config.ini file.'
 			);
 		}
+		$this->conf['importType'] = $defaults['importType'];
+		$this->conf['importRepos'] = $tempConf[$defaults['importType']]['importRepos'];
+		$this->conf['exportType'] = $defaults['exportType'];
+		$this->conf['exportRepos'] = $tempConf[$defaults['exportType']]['exportRepos'];
 		$this->checkConf();
 	}
 
@@ -129,19 +131,51 @@ class WmdbBase {
 	 * @throws Exception
 	 */
 	private function checkConf() {
-		if(($this->options['t'] == 'svn' || $this->options['t'] == 'git') && !isset($this->conf['exportRepos']) ) {
+		if(
+			($this->conf['exportType'] == 'svn' || $this->conf['exportType'] == 'git') &&
+			(!isset($this->conf['exportRepos']) || trim($this->conf['exportRepos']) == '')
+		) {
 			throw new Exception(
-				'Configuration file was found but no configuration set.' . LF .
-				'Please check your configuration in your config.ini file and set the needed parameter for ' . $this->options['t'] . '.'
+				'Configuration file was found but export configurations are missing or empty.' . LF .
+				'Please check your configuration in your config.ini file and set the needed parameter for ' . $this->conf['exportType'] . '.'
 			);
 		}
 
-		if($this->options['t'] == 'local' && !isset($this->conf['exportPath']) ) {
+		if(
+			($this->conf['importType'] == 'svn' || $this->conf['importType'] == 'git') &&
+			(!isset($this->conf['importRepos']) || trim($this->conf['importRepos']) == '')
+		) {
 			throw new Exception(
-				'Configuration file was found but no configuration set.' . LF .
-				'Please check your configuration in your config.ini file and set the needed parameter for ' . $this->options['t'] . '.'
+				'Configuration file was found but import configurations are missing or empty.' . LF .
+				'Please check your configuration in your config.ini file and set the needed parameter for ' . $this->conf['importType'] . '.'
 			);
 		}
+		if($this->url_exists($this->conf['exportRepos']) === false) {
+			throw new Exception(
+				'Export URL does not exsists. Please check the url: "' . $this->conf['exportRepos'] . '"!'
+			);
+		}
+		if($this->url_exists($this->conf['importRepos']) === false) {
+			throw new Exception(
+				'Import URL does not exsists. Please check the url: "' . $this->conf['importRepos'] . '"!'
+			);
+		}
+	}
+
+	function url_exists($url) {
+		$exists = true;
+		$file_headers = @get_headers($url);
+		$InvalidHeaders = array('404', '403', '500');
+		if($file_headers === false) {
+			return false;
+		}
+		foreach($InvalidHeaders as $HeaderVal) {
+			if(strstr($file_headers[0], $HeaderVal)) {
+				$exists = false;
+				break;
+			}
+		}
+		return $exists;
 	}
 
 	/**
@@ -241,9 +275,13 @@ class WmdbBase {
 			'WmdbBaseDefault' => implode('', $explodeKey),
 			'wmdbbasedefault' => strtolower(implode('', $explodeKey)),
 			'Wmdb Base: Default' => implode(' ', $explodeKey),
+			'Wmdb Base CE:' => implode(' ', $explodeKey) . ' CE:',
 			'wmdb_default' => $this->options['k'],
 			'Wmdb Base Default' => implode(' ', $explodeKey)
 		);
+		if(isset($this->options['b']) && trim($this->options['b']) != '') {
+			$list['baseUrl'] = trim($this->options['b']);
+		}
 		exec('grep -lrE "' . implode('|', array_keys($list)) . '" ' . $this->options['k'] . '/*', $out, $error);
 		foreach($out AS $file) {
 			// read the file
@@ -275,18 +313,15 @@ class WmdbBase {
 		if(trim($options['k']) == '') {
 			throw new Exception("Please set an extension key!");
 		}
-		if(!isset($options['t']) && trim($options['t']) == '') {
-			$options['t'] = 'svn';
-		}
 		if(!isset($this->conf['exportPath']) && $options['t'] == 'local') {
 			throw new Exception("No path to storage folder set, but type 'local' found.");
 		}
-		switch($options['t']) {
+		switch($this->conf['exportType']) {
 			case 'svn':
 				exec('svn export ' . $this->conf['exportRepos'] . ' ./' . $options['k'], $output, $error);
 			break;
 			case 'git':
-				// @TODO Git export
+				#exec('svn export ' . $this->conf['exportRepos'] . ' ./' . $options['k'], $output, $error);
 			break;
 			case 'local':
 				exec('cp -R ' . $this->conf['exportPath'] . ' ./' . $options['k'], $output, $error);
@@ -298,19 +333,38 @@ class WmdbBase {
 		}
 	}
 
+	private function testVcs() {
+		echo 'Check if Extension repo already existing...' . LF;
+		sleep(1);
+		switch($this->conf['exportType']) {
+			case 'svn':
+				$this->testSvnRepo($this->options);
+				break;
+			case 'git':
+				$this->testGitRepo($this->options);
+				break;
+			case 'local':
+
+				break;
+		}
+	}
+
+	private function testGitRepo($options) {
+		$e = 1;
+		$out = 0;
+		if($e == 0 && is_array($out) && count($out) > 0 ) {
+			throw new Exception('The extension "' . $options['k'] . '" aleready exists in GIT repos "' .  $this->conf['importRepos'] . $options['k'] . '.git"');
+		}
+		echo HRLine;
+	}
+
 	/**
 	 * Check if given ExtKey already exists.
 	 *
-	 * @TODO Check for other vcs based on options.
 	 * @param $options
 	 * @throws Exception is thrown if config is wrong or Extension already exsits
 	 */
 	private function testSvnRepo($options) {
-		echo 'Check if Extension repo already existing...' . LF;
-		if(!isset($this->conf['importRepos'])) {
-			throw new Exception("No repository found for type '" . $options['t'] . "', please check your config.ini");
-		}
-		sleep(1);
 		exec('svn ls ' . $this->conf['importRepos'] . $options['k'] . '/trunk/', $out, $e);
 		if($e == 0 && is_array($out) && count($out) > 0 ) {
 			throw new Exception('The extension "' . $options['k'] . '" aleready exists in SVN repos "' .  $this->conf['importRepos'] . $options['k'] . '/trunk/"');
@@ -325,6 +379,18 @@ class WmdbBase {
 	 * @param array $options
 	 */
 	private function importToVersionControle($options) {
+		switch($this->conf['exportType']) {
+			case 'svn':
+
+				break;
+			case 'git':
+
+				break;
+			case 'local':
+
+				break;
+		}
+
 		echo 'Initial import...' . LF;
 		sleep(1);
 		passthru('svn import -m "Initial import of ' . $options['k'] . '" ./' . $options['k'] . '/ ' . $this->conf['importRepos'] . $options['k'] . '/trunk/', $e);

@@ -78,28 +78,9 @@ class WmdbBase {
                         __.l\"-:_JL_;-\";.__
                     .-j/'.;  ;\"\"\"\"  / .'\\\"-.
                    .' /:`. \"-.:     .-\" .';  `.      
-                .-\"  / ;  \"-. \"-..-\" .-\"  :    \"-.   
+                .-\"  / ; Use the source Luke! :    \"-.
              .+\"-.  : :      \"-.__.-\"      ;-._   \\
-             ; \\  `.; ;                    : : \"+. ;
-             :  ;   ; ;                    : ;  : \\:
-             ;  :   ; :                    ;:   ;  : 
-            : \\  ;  :  ;                  : ;  /  ::
-            ;  ; :   ; :                  ;   :   ;: 
-            :  :  ;  :  ;                : :  ;  : ; 
-            ;\\    :   ; :                ; ;     ; ;
-            : `.\"-;   :  ;              :  ;    /  ; 
-             ;    -:   ; :              ;  : .-\"   : 
-             :\\     \\  :  ;            : \\.-\"      :
-              ;`.    \\  ; :            ;.'_..--  / ;
-              :  \"-.  \"-:  ;          :/.\"      .'  :
-               \\         \\ :          ;/  __        :
-                \\       .-`.\\        /t-\"\"  \":-+.   :
-                 `.  .-\"    `l    __/ /`. :  ; ; \\  ;
-                   \\   .-\" .-\"-.-\"  .' .'j \\  /   ;/
-                    \\ / .-\"   /.     .'.' ;_:'    ;
-                     :-\"\"-.`./-.'     /    `.___.'   
-                           \\ `t  ._  /
-                            \"-.t-._:'    Use the source Luke!";
+           -----------------------------------------------";
 	}
 
 	/**
@@ -291,7 +272,7 @@ class WmdbBase {
 			// write the file
 			file_put_contents($file, $fileContent);
 			echo 'Content replaced in: ' . $file . LF;
-			if(strpos($file, '_pi_') !== false) {
+			if(strpos($file, '_wmdbbasedefault_') !== false) {
 				$newName = str_replace('wmdbbasedefault', $list['wmdbbasedefault'], $file);
 				exec('mv ' . $file . ' ' . $newName);
 				echo 'File renamed: ' . $file . LF . 'To: ' . $newName . LF . LF;

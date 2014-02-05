@@ -15,7 +15,7 @@ define('LF', chr(10));
 // a carriage return
 define('CR', chr(13));
 #define('CR', '—');
-define('LINE', '—');
+define('LINE', '-');
 // a CR-LF combination
 define('CRLF', CR . LF);
 ini_set('error_reporting', 0);

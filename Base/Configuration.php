@@ -25,6 +25,14 @@ class Configuration {
 		'b::' => array(
 			'name' => 'b::',
 			'type' => 'String'
+		),
+		'branch::' => array(
+			'name' => 'branch::',
+			'type' => 'String'
+		),
+		'tag::' => array(
+			'name' => 'tag::',
+			'type' => 'String'
 		)
 	);
 	protected static $longOptions = array('extkey:' => 'k:', 'type::' => 't::', 'help::' => 'h::', 'baseurl::' => 'b::');

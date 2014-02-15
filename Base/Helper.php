@@ -13,6 +13,8 @@ class Helper {
 			' -k, -extkey :' . TAB . TAB . '[required] You have to pass the extension key with this option (-k wmdb_base_awesome)' . LF .
 			' --h, --help :' . TAB . TAB . 'Will show informations' . LF .
 			' --novcs:' . TAB . TAB . 'Disable the VCS import' . LF .
+			' --branch: ' . TAB . TAB . 'Define a branch to export from repository.' .
+			' --tag: ' . TAB . TAB . 'Define a tag to export from repository.' .
 			' --b, --baseurl:' . TAB . TAB . 'Sets the base URL to the given url. Please do not add any protocol to your url! (Example: www.wmdb.de, NOT http://www.wmdb.de/)' . LF . LF .
 			'The builder will automatically import the new Extension to the repository "' . $importRepo . '".' . LF .
 			"

@@ -14,6 +14,7 @@ class Svn {
 			trigger_error('Configuration array is empty...' . LF . 'Please check your configurations!'.LF ,E_USER_ERROR);
 		}
 
+		$this->configureExportPath();
 		$this->conf['user']['username'] = trim(shell_exec("read -p 'Enter user SVN username: ' username\necho \$username"));
 		/** We dont want that someone can read the user password */
 		echo 'Enter user SVN password: ';
@@ -38,9 +39,14 @@ class Svn {
 			trigger_error('The extension "' . $this->conf['params']['k:'] . '" already exists! ' . LF ,E_USER_ERROR);
 		}
 
-		exec('svn ls --username ' . $this->conf['user']['username'] . ' --password ' . $this->conf['user']['password'] . ' --no-auth-cache ' . $completeImportPath, $out, $e);
-		if(intval($e) === 0 && is_array($out) && count($out) > 0 ) {
-			trigger_error('The extension "' . $extKey . '" aleready exists in SVN repos "' .  $importRepos . '"', E_USER_ERROR);
+		if(!isset($this->conf['params']['novcs::'])) {
+			if(!Helper::urlExists($completeImportPath)) {
+				trigger_error('The import repository url "' . $completeImportPath . '" is not valid! ' . LF . 'Please check your configurations!'.LF ,E_USER_ERROR);
+			}
+			exec('svn ls --username ' . $this->conf['user']['username'] . ' --password ' . $this->conf['user']['password'] . ' --no-auth-cache ' . $completeImportPath, $out, $e);
+			if(intval($e) === 0 && is_array($out) && count($out) > 0 ) {
+				trigger_error('The extension "' . $extKey . '" aleready exists in SVN repos "' .  $importRepos . '"', E_USER_ERROR);
+			}
 		}
 
 		Helper::printLine('Exporting from "' . $exportPath . '" ...');
@@ -74,5 +80,27 @@ class Svn {
 			Helper::printLine('Remove backup....');
 			shell_exec('rm -rf ./' . $extKey . '_');
 		}
+	}
+
+
+	public function configureExportPath(){
+		$exportPath = $this->conf['svn']['exportRepos'];
+		$exportPath = substr($exportPath, -1) !== '/' ? $exportPath . '/' : $exportPath;
+
+		$branch = isset($this->conf['params']['branch::']) ? trim($this->conf['params']['branch::']) : false;
+		$tag = isset($this->conf['params']['tag::']) ? trim($this->conf['params']['tag::']) : false;
+		$defaultFallback = isset($this->conf['default']['exportVersion']) && trim($this->conf['default']['exportVersion']) != '' ?
+							$this->conf['default']['exportVersion'] : false;
+
+		if( $tag ) {
+			$exportPath = $exportPath . 'tags/' . $tag;
+		} elseif( $branch ) {
+			$exportPath = $exportPath . 'branches/' . $branch;
+		} elseif( $defaultFallback ) {
+			$exportPath = $exportPath . $defaultFallback;
+		} else {
+			$exportPath = $exportPath . 'trunk/';
+		}
+		$this->conf['svn']['exportRepos'] = $exportPath;
 	}
 }

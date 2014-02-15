@@ -13,6 +13,7 @@ class Build {
 
 	public function init() {
 		$conf = Base\Configuration::getConf();
+
 		/**
 		 * Set export type, SVN or GIT
 		 */
